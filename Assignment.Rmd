@@ -1,0 +1,90 @@
+---
+title: 'Peer-graded Assignment: Prediction Assignment Writeup'
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+---
+* * *
+
+### Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+### Data
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+### Loading Library
+This part load the library needed in this report.
+```{r, message=FALSE, warning=FALSE}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+```
+
+### Data preprocessing
+This part preprocess the data as explained in the comments.
+```{r}
+## Read files
+train <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+test <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+
+## Remove columns with NAs
+train <- train[, colSums(is.na(train)) == 0]
+test <- test[, colSums(is.na(test)) == 0]
+
+## Remove irrelevant columns
+train <- train[, -c(1:7)]
+test <- test[, -c(1:7)]
+```
+
+
+### Cross-validation
+We divide the data into train and test set with a ratio of 75:25.
+```{r}
+sub <- createDataPartition(y=train$classe, p=0.75, list=FALSE)
+subTrain <- train[sub, ]
+subTest <- train[-sub, ]
+```
+
+### Prediction 1: Decision Tree
+We first try to fit data with simple decision tree and plot its structure.
+```{r}
+model1 <- rpart(classe ~ ., data=subTrain, method="class")
+rpart.plot(model1)
+```
+
+Then, we predict the data in the test set and analyze its accuracy.
+```{r}
+predict1 <- predict(model1, subTest, type = "class")
+confusionMatrix(predict1, subTest$classe)
+```
+As we can see, we obtained the accuracy of 0.73 with the 95% confidence interval = (0.7122, 0.7374).
+
+### Prediction 2: Random Forest
+In this section, we try a more compliated model which is the random forest.
+```{r}
+model2 <- randomForest(classe ~ ., data=subTrain, method = "class")
+```
+
+```{r}
+predict2 <- predict(model2, subTest, type = "class")
+confusionMatrix(predict2, subTest$classe)
+```
+We can get a much better accuracy which is 0.99 with 95% confidence interval = (0.9937, 0.9975). The expected out-of-sample error is estimated at 0.05%. Therefore, the random forest is choosen in this study because of its accuracy even though the interpretability may be decreased.
+
+### Quiz
+This section generate the answer for the quiz portion.
+```{r}
+predict(model2, test, type="class")
+```
+
+* * *
